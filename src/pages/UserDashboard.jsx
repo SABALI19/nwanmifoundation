@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const navItems = [
   { label: 'All Tasks', active: true, icon: 'check' },
@@ -7,12 +7,7 @@ const navItems = [
   { label: 'Settings', icon: 'settings' },
 ]
 
-const tasks = [
-  { title: 'Buy fresh groceries for the week', tag: 'PERSONAL' },
-  { title: 'Call John about project feedback', tag: 'WORK' },
-  { title: 'Morning meditation session', tag: 'HEALTH', done: true },
-  { title: 'Review Q3 marketing budget', tag: 'WORK', due: 'Due 2PM' },
-]
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 function Icon({ name, className = 'h-4 w-4' }) {
   const paths = {
@@ -37,6 +32,8 @@ function Icon({ name, className = 'h-4 w-4' }) {
     menu: 'M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z',
     close:
       'm6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z',
+    trash:
+      'M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v9H7V9Zm4 0h2v9h-2V9Zm4 0h2v9h-2V9ZM6 8h12l-1 13H7L6 8Z',
   }
 
   return (
@@ -105,7 +102,7 @@ function Sidebar({ className = '', onClose }) {
   )
 }
 
-function TaskItem({ task }) {
+function TaskItem({ task, onDelete }) {
   return (
     <div className={`flex min-h-[74px] items-center gap-4 rounded-md border border-slate-300 bg-white px-4 ${task.done ? 'opacity-70' : ''}`}>
       <span
@@ -122,6 +119,14 @@ function TaskItem({ task }) {
           {task.due && <span className="text-[10px] font-bold text-rose-600">{task.due}</span>}
         </div>
       </div>
+      <button
+        type="button"
+        className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+        aria-label={`Delete ${task.title}`}
+        onClick={() => onDelete(task._id)}
+      >
+        <Icon name="trash" className="h-4 w-4" />
+      </button>
     </div>
   )
 }
@@ -181,6 +186,123 @@ function RightPanel() {
 
 function UserDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [tasks, setTasks] = useState([])
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+  const token = localStorage.getItem('token') || localStorage.getItem('authToken')
+
+  const completedCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks])
+  const nextTask = tasks.find((task) => !task.done)
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  }
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!token) {
+        setIsLoading(false)
+        setError('Sign in to view your tasks.')
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/tasks`, {
+          headers: authHeaders,
+        })
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Could not load tasks')
+        }
+
+        setTasks(data.tasks)
+        setError('')
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchTasks()
+  }, [token])
+
+  const handleCreateTask = async (event) => {
+    event.preventDefault()
+
+    const title = newTaskTitle.trim()
+    if (!title || !token) return
+
+    setIsSaving(true)
+    setError('')
+
+    try {
+      const response = await fetch(`${API_URL}/api/tasks`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ title, tag: 'PERSONAL' }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Could not create task')
+      }
+
+      setTasks((currentTasks) => [data.task, ...currentTasks])
+      setNewTaskTitle('')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteTask = async (taskId) => {
+    if (!token) return
+
+    const previousTasks = tasks
+    setTasks((currentTasks) => currentTasks.filter((task) => task._id !== taskId))
+
+    try {
+      const response = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Could not delete task')
+      }
+    } catch (err) {
+      setTasks(previousTasks)
+      setError(err.message)
+    }
+  }
+
+  const handleMarkAllDone = async () => {
+    if (!token) return
+
+    const incompleteTasks = tasks.filter((task) => !task.done)
+    setTasks((currentTasks) => currentTasks.map((task) => ({ ...task, done: true })))
+
+    try {
+      await Promise.all(
+        incompleteTasks.map((task) =>
+          fetch(`${API_URL}/api/tasks/${task._id}`, {
+            method: 'PATCH',
+            headers: authHeaders,
+            body: JSON.stringify({ done: true }),
+          })
+        )
+      )
+    } catch (err) {
+      setError('Could not mark all tasks done')
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#f7f8ff] text-slate-950">
@@ -221,47 +343,73 @@ function UserDashboard() {
                 <h2 className="text-[26px] font-extrabold leading-tight tracking-normal text-slate-950 sm:text-[30px]">
                   Good morning, Alex.
                 </h2>
-                <p className="mt-2 text-[15px] font-medium text-slate-600 sm:mt-3">You have 5 tasks to focus on today.</p>
+                <p className="mt-2 text-[15px] font-medium text-slate-600 sm:mt-3">
+                  You have {tasks.filter((task) => !task.done).length} tasks to focus on today.
+                </p>
               </div>
 
-              <div className="flex h-[66px] items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 shadow-sm sm:gap-4 sm:px-4">
+              <form
+                className="flex h-[66px] items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 shadow-sm sm:gap-4 sm:px-4"
+                onSubmit={handleCreateTask}
+              >
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-500 text-white">
                   <Icon name="plus" className="h-4 w-4" />
                 </span>
                 <input
                   className="min-w-0 flex-1 bg-transparent text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
                   placeholder="Create a new task..."
+                  value={newTaskTitle}
+                  onChange={(event) => setNewTaskTitle(event.target.value)}
+                  disabled={!token || isSaving}
                 />
-                <Icon name="calendar" className="h-5 w-5 shrink-0 text-slate-500" />
-                <Icon name="folder" className="h-5 w-5 shrink-0 text-slate-500" />
-              </div>
+                <button
+                  type="submit"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#465df0] text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  aria-label="Create task"
+                  disabled={!newTaskTitle.trim() || !token || isSaving}
+                >
+                  <Icon name="plus" className="h-5 w-5" />
+                </button>
+              </form>
+              {error && <p className="mt-3 text-[13px] font-semibold text-rose-600">{error}</p>}
 
               <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
                 <div className="rounded-lg border border-slate-300/70 bg-[#eef3ff] p-4">
                   <p className="text-[10px] font-extrabold text-slate-500">COMPLETED</p>
-                  <p className="mt-2 text-[19px] font-extrabold text-[#244beb]">12/17</p>
+                  <p className="mt-2 text-[19px] font-extrabold text-[#244beb]">
+                    {completedCount}/{tasks.length}
+                  </p>
                 </div>
                 <div className="rounded-lg border border-slate-300/70 bg-[#eef3ff] p-4">
                   <p className="text-[10px] font-extrabold text-slate-500">NEXT UP</p>
-                  <p className="mt-2 text-[15px] font-semibold text-slate-800">Grocery Shopping</p>
+                  <p className="mt-2 text-[15px] font-semibold text-slate-800">
+                    {nextTask ? nextTask.title : 'No pending tasks'}
+                  </p>
                 </div>
                 <div className="rounded-lg border border-slate-300/70 bg-[#eef3ff] p-4">
                   <p className="text-[10px] font-extrabold text-slate-500">EFFICIENCY</p>
-                  <p className="mt-2 text-[15px] font-semibold text-slate-800">+14%</p>
+                  <p className="mt-2 text-[15px] font-semibold text-slate-800">
+                    {tasks.length ? `${Math.round((completedCount / tasks.length) * 100)}%` : '0%'}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-9 mb-4 flex items-center justify-between">
                 <h3 className="text-[13px] font-extrabold tracking-wide text-slate-800">TODAY'S FOCUS</h3>
-                <button type="button" className="text-[11px] font-bold text-[#244beb]">
+                <button type="button" className="text-[11px] font-bold text-[#244beb]" onClick={handleMarkAllDone}>
                   Mark all done
                 </button>
               </div>
 
               <div className="space-y-2">
-                {tasks.map((task) => (
-                  <TaskItem key={task.title} task={task} />
-                ))}
+                {isLoading && <p className="text-[13px] font-semibold text-slate-500">Loading tasks...</p>}
+                {!isLoading && tasks.length === 0 && (
+                  <p className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-[13px] font-semibold text-slate-500">
+                    No tasks yet.
+                  </p>
+                )}
+                {!isLoading &&
+                  tasks.map((task) => <TaskItem key={task._id} task={task} onDelete={handleDeleteTask} />)}
               </div>
 
               <p className="mt-9 text-center text-[12px] font-medium text-slate-300">
