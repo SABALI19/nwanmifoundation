@@ -191,15 +191,19 @@ function UserDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  // Support both token keys while the auth screens are still being wired into this dashboard.
   const token = localStorage.getItem('token') || localStorage.getItem('authToken')
 
   const completedCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks])
   const nextTask = tasks.find((task) => !task.done)
 
-  const authHeaders = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }
+  const authHeaders = useMemo(
+    () => ({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    }),
+    [token]
+  )
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -229,7 +233,7 @@ function UserDashboard() {
     }
 
     fetchTasks()
-  }, [token])
+  }, [authHeaders, token])
 
   const handleCreateTask = async (event) => {
     event.preventDefault()
@@ -265,6 +269,7 @@ function UserDashboard() {
     if (!token) return
 
     const previousTasks = tasks
+    // Remove immediately so the dashboard feels responsive; restore below if the API rejects it.
     setTasks((currentTasks) => currentTasks.filter((task) => task._id !== taskId))
 
     try {
@@ -287,6 +292,7 @@ function UserDashboard() {
     if (!token) return
 
     const incompleteTasks = tasks.filter((task) => !task.done)
+    // This mirrors the batch request visually; individual failures are surfaced as one dashboard error.
     setTasks((currentTasks) => currentTasks.map((task) => ({ ...task, done: true })))
 
     try {
@@ -299,7 +305,7 @@ function UserDashboard() {
           })
         )
       )
-    } catch (err) {
+    } catch {
       setError('Could not mark all tasks done')
     }
   }
