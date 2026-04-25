@@ -1,3 +1,7 @@
+import { useState } from 'react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 function FieldIcon({ type }) {
   if (type === 'mail') {
     return (
@@ -31,7 +35,54 @@ function FieldIcon({ type }) {
   )
 }
 
-function Signup() {
+function Signup({ onAuthSuccess, onShowLogin }) {
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+  })
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setFormData((currentData) => ({ ...currentData, [name]: value }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+
+    if (!acceptedTerms) {
+      setError('Please agree to the terms before creating an account.')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Signup failed')
+      }
+
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      onAuthSuccess?.()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f8ff] text-slate-950">
       <div className="pointer-events-none fixed right-0 top-0 h-full w-[45vw] min-w-[420px] bg-[radial-gradient(circle_at_42%_46%,rgba(96,113,255,0.18),rgba(96,113,255,0.08)_32%,rgba(255,255,255,0)_67%)]" />
@@ -52,7 +103,7 @@ function Signup() {
           </p>
         </div>
 
-        <form className="w-full rounded-xl border border-slate-300/90 bg-white p-7 shadow-sm" aria-label="Create account">
+        <form className="w-full rounded-xl border border-slate-300/90 bg-white p-7 shadow-sm" aria-label="Create account" onSubmit={handleSubmit}>
           <h2 className="mb-7 text-[24px] font-bold leading-none tracking-normal">Create Account</h2>
 
           <label className="mb-5 block">
@@ -62,7 +113,11 @@ function Signup() {
               <input
                 className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
                 type="text"
+                name="fullName"
                 placeholder="John Doe"
+                value={formData.fullName}
+                onChange={handleChange}
+                required
               />
             </span>
           </label>
@@ -74,7 +129,11 @@ function Signup() {
               <input
                 className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
                 type="email"
+                name="email"
                 placeholder="john@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
               />
             </span>
           </label>
@@ -86,7 +145,12 @@ function Signup() {
               <input
                 className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
                 type="password"
+                name="password"
                 placeholder="********"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                minLength="8"
               />
               <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-500" aria-hidden="true">
                 <path
@@ -99,18 +163,26 @@ function Signup() {
           <p className="mt-2 text-[11px] font-medium text-slate-500">Must be at least 8 characters long.</p>
 
           <label className="mt-7 flex items-center gap-2 text-[13px] text-slate-600">
-            <input type="checkbox" className="h-4 w-4 rounded border-slate-300 accent-[#465df0]" />
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 accent-[#465df0]"
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+            />
             <span>
               I agree to the <a className="font-bold text-[#244beb]" href="#">Terms of Service</a> and{' '}
               <a className="font-bold text-[#244beb]" href="#">Privacy Policy</a>.
             </span>
           </label>
 
+          {error && <p className="mt-4 text-[13px] font-semibold text-rose-600">{error}</p>}
+
           <button
             type="submit"
-            className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#465df0] text-[15px] font-medium text-white shadow-lg shadow-indigo-200 transition hover:bg-[#344be0] focus:outline-none focus:ring-4 focus:ring-indigo-200"
+            className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#465df0] text-[15px] font-medium text-white shadow-lg shadow-indigo-200 transition hover:bg-[#344be0] focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={isSubmitting}
           >
-            Create Account
+            {isSubmitting ? 'Creating Account...' : 'Create Account'}
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path fill="currentColor" d="m13.2 5.3 5.7 5.7H4v2h14.9l-5.7 5.7 1.4 1.4L22.7 12l-8.1-8.1-1.4 1.4Z" />
             </svg>
@@ -140,7 +212,7 @@ function Signup() {
         </form>
 
         <p className="mt-8 text-[14px] text-slate-600">
-          Already have an account? <a className="font-bold text-[#244beb]" href="#">Log In</a>
+          Already have an account? <button type="button" className="font-bold text-[#244beb]" onClick={onShowLogin}>Log In</button>
         </p>
       </section>
     </main>

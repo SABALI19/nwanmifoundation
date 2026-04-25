@@ -1,3 +1,7 @@
+import { useState } from 'react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 function BrandMark() {
   return (
     <div className="flex items-center justify-center gap-2">
@@ -14,7 +18,46 @@ function BrandMark() {
   )
 }
 
-function Login() {
+function Login({ onAuthSuccess, onShowSignup }) {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  })
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setFormData((currentData) => ({ ...currentData, [name]: value }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed')
+      }
+
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      onAuthSuccess?.()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f8ff] text-slate-950">
       <section className="mx-auto flex min-h-screen w-full max-w-[520px] flex-col items-center px-6 py-7">
@@ -23,6 +66,7 @@ function Login() {
         <form
           className="mt-[170px] w-full max-w-[395px] rounded-xl border border-slate-300/90 bg-white px-6 py-8 shadow-sm"
           aria-label="Log in"
+          onSubmit={handleSubmit}
         >
           <div className="mb-9 text-center">
             <h1 className="text-[17px] font-medium leading-none text-slate-900">Welcome back</h1>
@@ -34,7 +78,11 @@ function Login() {
             <input
               className="h-11 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[15px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
               type="email"
+              name="email"
               placeholder="name@company.com"
+              value={formData.email}
+              onChange={handleChange}
+              required
             />
           </label>
 
@@ -48,15 +96,22 @@ function Login() {
             <input
               className="h-11 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[15px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
               type="password"
+              name="password"
               placeholder="********"
+              value={formData.password}
+              onChange={handleChange}
+              required
             />
           </label>
 
+          {error && <p className="mt-4 text-[13px] font-semibold text-rose-600">{error}</p>}
+
           <button
             type="submit"
-            className="mt-5 flex h-[55px] w-full items-center justify-center gap-2 rounded-md bg-[#465df0] text-[15px] font-medium text-white shadow-lg shadow-indigo-200 transition hover:bg-[#344be0] focus:outline-none focus:ring-4 focus:ring-indigo-200"
+            className="mt-5 flex h-[55px] w-full items-center justify-center gap-2 rounded-md bg-[#465df0] text-[15px] font-medium text-white shadow-lg shadow-indigo-200 transition hover:bg-[#344be0] focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={isSubmitting}
           >
-            Login
+            {isSubmitting ? 'Logging in...' : 'Login'}
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path fill="currentColor" d="m13.2 5.3 5.7 5.7H4v2h14.9l-5.7 5.7 1.4 1.4L22.7 12l-8.1-8.1-1.4 1.4Z" />
             </svg>
@@ -88,9 +143,9 @@ function Login() {
 
         <p className="mt-8 text-[14px] text-slate-700">
           Don't have an account?{' '}
-          <a className="font-medium text-[#244beb]" href="#">
+          <button type="button" className="font-medium text-[#244beb]" onClick={onShowSignup}>
             Sign up
-          </a>
+          </button>
         </p>
       </section>
     </main>

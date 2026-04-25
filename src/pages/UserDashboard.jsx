@@ -43,7 +43,7 @@ function Icon({ name, className = 'h-4 w-4' }) {
   )
 }
 
-function Sidebar({ className = '', onClose }) {
+function Sidebar({ className = '', onClose, onSignOut }) {
   return (
     <aside className={`flex h-full w-[232px] shrink-0 flex-col border-r border-slate-200 bg-white ${className}`}>
       <div className="flex items-center justify-between px-7 pb-7 pt-4">
@@ -93,10 +93,14 @@ function Sidebar({ className = '', onClose }) {
           <Icon name="help" className="h-[18px] w-[18px]" />
           Help
         </a>
-        <a href="#" className="flex items-center gap-3 px-5 text-[13px] font-semibold text-slate-600">
+        <button
+          type="button"
+          className="flex items-center gap-3 px-5 text-[13px] font-semibold text-slate-600"
+          onClick={onSignOut}
+        >
           <Icon name="logout" className="h-[18px] w-[18px]" />
           Sign Out
-        </a>
+        </button>
       </div>
     </aside>
   )
@@ -184,7 +188,7 @@ function RightPanel() {
   )
 }
 
-function UserDashboard() {
+function UserDashboard({ onSignOut }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tasks, setTasks] = useState([])
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -310,6 +314,13 @@ function UserDashboard() {
     }
   }
 
+  const handleSignOut = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('user')
+    onSignOut?.()
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f8ff] text-slate-950">
       {sidebarOpen && (
@@ -320,12 +331,12 @@ function UserDashboard() {
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
           />
-          <Sidebar className="relative z-10 shadow-2xl" onClose={() => setSidebarOpen(false)} />
+          <Sidebar className="relative z-10 shadow-2xl" onClose={() => setSidebarOpen(false)} onSignOut={handleSignOut} />
         </div>
       )}
 
       <div className="flex min-h-screen">
-        <Sidebar className="hidden lg:flex" />
+        <Sidebar className="hidden lg:flex" onSignOut={handleSignOut} />
 
         <div className="flex min-w-0 flex-1 flex-col xl:flex-row">
           <section className="min-w-0 flex-1 border-r border-slate-200">
