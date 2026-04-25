@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bell,
   Calendar,
@@ -197,6 +197,15 @@ function UserDashboard({ onSignOut }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const taskInputRef = useRef(null)
+  const user = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user')) || {}
+    } catch {
+      return {}
+    }
+  }, [])
+  const firstName = user.fullName?.split(' ')[0] || user.email?.split('@')[0] || 'there'
   // Support both token keys while the auth screens are still being wired into this dashboard.
   const token = localStorage.getItem('token') || localStorage.getItem('authToken')
 
@@ -360,7 +369,7 @@ function UserDashboard({ onSignOut }) {
             <div className="mx-auto max-w-[610px] px-4 py-8 sm:px-6 sm:py-12">
               <div className="mb-8 sm:mb-10">
                 <h2 className="text-[26px] font-extrabold leading-tight tracking-normal text-slate-950 sm:text-[30px]">
-                  Good morning, Alex.
+                  Good morning, {firstName}.
                 </h2>
                 <p className="mt-2 text-[15px] font-medium text-slate-600 sm:mt-3">
                   You have {tasks.filter((task) => !task.done).length} tasks to focus on today.
@@ -371,10 +380,16 @@ function UserDashboard({ onSignOut }) {
                 className="flex h-[66px] items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 shadow-sm sm:gap-4 sm:px-4"
                 onSubmit={handleCreateTask}
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-500 text-white">
+                <button
+                  type="button"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-500 text-white transition hover:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                  aria-label="Focus task input"
+                  onClick={() => taskInputRef.current?.focus()}
+                >
                   <Icon name="plus" className="h-4 w-4" />
-                </span>
+                </button>
                 <input
+                  ref={taskInputRef}
                   className="min-w-0 flex-1 bg-transparent text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
                   placeholder="Create a new task..."
                   value={newTaskTitle}
