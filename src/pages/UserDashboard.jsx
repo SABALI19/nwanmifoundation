@@ -51,6 +51,14 @@ const isTaskUpcoming = (task) => {
   return parsedDate >= new Date()
 }
 
+const getGreeting = () => {
+  const hour = new Date().getHours()
+
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 function Icon({ name, className = 'h-4 w-4' }) {
   const icons = {
     check: Check,
@@ -236,6 +244,7 @@ function UserDashboard({ onSignOut }) {
   })
   const taskInputRef = useRef(null)
   const firstName = user.fullName?.split(' ')[0] || user.email?.split('@')[0] || 'there'
+  const greeting = getGreeting()
   // Support both token keys while the auth screens are still being wired into this dashboard.
   const token = localStorage.getItem('token') || localStorage.getItem('authToken')
 
@@ -474,7 +483,7 @@ function UserDashboard({ onSignOut }) {
             <div className="mx-auto max-w-[610px] px-4 py-8 sm:px-6 sm:py-12">
               <div className="mb-8 sm:mb-10">
                 <h2 className="text-[26px] font-extrabold leading-tight tracking-normal text-slate-950 sm:text-[30px]">
-                  Good morning, {firstName}.
+                  {greeting}, {firstName}.
                 </h2>
                 <p className="mt-2 text-[15px] font-medium text-slate-600 sm:mt-3">
                   You have {tasks.filter((task) => !task.done).length} tasks to focus on today.
