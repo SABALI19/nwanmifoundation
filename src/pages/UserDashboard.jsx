@@ -108,16 +108,19 @@ function Sidebar({ className = '', onClose, onSignOut }) {
   )
 }
 
-function TaskItem({ task, onDelete }) {
+function TaskItem({ task, onDelete, onToggle }) {
   return (
     <div className={`flex min-h-[74px] items-center gap-4 rounded-md border border-slate-300 bg-white px-4 ${task.done ? 'opacity-70' : ''}`}>
-      <span
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+      <button
+        type="button"
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition focus:outline-none focus:ring-4 focus:ring-indigo-100 ${
           task.done ? 'border-[#6f86f8] bg-[#6f86f8] text-white' : 'border-slate-300 bg-white'
         }`}
+        aria-label={task.done ? `Mark ${task.title} incomplete` : `Mark ${task.title} complete`}
+        onClick={() => onToggle(task)}
       >
         {task.done && <Icon name="check" className="h-3 w-3" />}
-      </span>
+      </button>
       <div className="min-w-0">
         <p className={`text-[15px] font-medium text-slate-800 ${task.done ? 'line-through' : ''}`}>{task.title}</p>
         <div className="mt-2 flex items-center gap-2">
@@ -137,55 +140,34 @@ function TaskItem({ task, onDelete }) {
   )
 }
 
-function RightPanel() {
+function RightPanel({ upcomingTasks }) {
   return (
     <aside className="w-full shrink-0 bg-[#eaf0ff] px-4 py-7 sm:px-6 xl:w-[295px]">
       <h2 className="mb-5 text-[13px] font-extrabold tracking-wide text-slate-800">UPCOMING EVENTS</h2>
 
-      <div className="space-y-4">
-        <div className="flex gap-4">
-          <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-md bg-[#cddcff] text-[#244beb]">
-            <span className="text-[9px] font-extrabold">SEP</span>
-            <span className="text-[13px] font-extrabold">24</span>
-          </div>
-          <div>
-            <p className="text-[13px] font-bold text-slate-800">Client Kick-off</p>
-            <p className="mt-1 text-[12px] text-slate-600">10:30 AM - 11:30 AM</p>
-          </div>
+      {upcomingTasks.length > 0 ? (
+        <div className="space-y-4">
+          {upcomingTasks.map((task, index) => (
+            <div key={task._id} className="flex gap-4">
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md ${
+                  index === 0 ? 'bg-[#cddcff] text-[#244beb]' : 'bg-white text-slate-600'
+                }`}
+              >
+                <Icon name="calendar" className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-bold text-slate-800">{task.title}</p>
+                <p className="mt-1 text-[12px] text-slate-600">{task.due}</p>
+              </div>
+            </div>
+          ))}
         </div>
-
-        <div className="flex gap-4">
-          <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-md bg-white text-slate-600">
-            <span className="text-[9px] font-extrabold">SEP</span>
-            <span className="text-[13px] font-extrabold">25</span>
-          </div>
-          <div>
-            <p className="text-[13px] font-bold text-slate-800">Doctor's Appt.</p>
-            <p className="mt-1 text-[12px] text-slate-600">09:00 AM</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 rounded-xl bg-[#cfe0ff] px-4 py-5">
-        <p className="text-[11px] font-extrabold tracking-wide text-slate-600">PRODUCTIVITY QUOTE</p>
-        <p className="mt-3 text-[13px] font-semibold italic leading-5 text-slate-700">
-          "The secret of getting ahead is getting started."
+      ) : (
+        <p className="rounded-md border border-dashed border-slate-300 bg-white/70 px-4 py-6 text-center text-[13px] font-semibold text-slate-500">
+          No upcoming events yet.
         </p>
-        <p className="mt-2 text-[12px] font-semibold text-[#465df0]">- Mark Twain</p>
-      </div>
-
-      <div className="mt-8 overflow-hidden rounded-xl bg-slate-950 shadow-sm">
-        <div className="relative h-[148px] bg-[radial-gradient(circle_at_70%_20%,rgba(160,197,255,0.35),transparent_30%),linear-gradient(135deg,#06111a,#142330_60%,#05080d)]">
-          <div className="absolute bottom-8 left-7 h-1 w-40 rounded-full bg-slate-800" />
-          <div className="absolute bottom-10 left-[92px] h-16 w-20 rounded-sm border-4 border-slate-800 bg-cyan-400/80 shadow-[0_0_25px_rgba(34,211,238,0.5)]" />
-          <div className="absolute bottom-8 left-[123px] h-3 w-5 bg-slate-800" />
-          <div className="absolute right-8 top-8 h-16 w-1 rounded bg-slate-500" />
-          <div className="absolute right-12 top-9 h-7 w-8 rounded-t-full bg-slate-300/80" />
-          <div className="absolute inset-x-0 bottom-0 bg-black/55 px-4 py-3 text-[11px] font-extrabold text-white">
-            Your Workspace is 80% Optimized
-          </div>
-        </div>
-      </div>
+      )}
     </aside>
   )
 }
@@ -197,20 +179,24 @@ function UserDashboard({ onSignOut }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
-  const taskInputRef = useRef(null)
-  const user = useMemo(() => {
+  const [user] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('user')) || {}
     } catch {
       return {}
     }
-  }, [])
+  })
+  const taskInputRef = useRef(null)
   const firstName = user.fullName?.split(' ')[0] || user.email?.split('@')[0] || 'there'
   // Support both token keys while the auth screens are still being wired into this dashboard.
   const token = localStorage.getItem('token') || localStorage.getItem('authToken')
 
   const completedCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks])
   const nextTask = tasks.find((task) => !task.done)
+  const upcomingTasks = useMemo(
+    () => tasks.filter((task) => task.due && !task.done).slice(0, 5),
+    [tasks]
+  )
 
   const authHeaders = useMemo(
     () => ({
@@ -297,6 +283,37 @@ function UserDashboard({ onSignOut }) {
         const data = await response.json()
         throw new Error(data.message || 'Could not delete task')
       }
+    } catch (err) {
+      setTasks(previousTasks)
+      setError(err.message)
+    }
+  }
+
+  const handleToggleTask = async (taskToUpdate) => {
+    if (!token) return
+
+    const nextDone = !taskToUpdate.done
+    const previousTasks = tasks
+    setError('')
+    setTasks((currentTasks) =>
+      currentTasks.map((task) => (task._id === taskToUpdate._id ? { ...task, done: nextDone } : task))
+    )
+
+    try {
+      const response = await fetch(`${API_URL}/api/tasks/${taskToUpdate._id}`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ done: nextDone }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Could not update task')
+      }
+
+      setTasks((currentTasks) =>
+        currentTasks.map((task) => (task._id === taskToUpdate._id ? data.task : task))
+      )
     } catch (err) {
       setTasks(previousTasks)
       setError(err.message)
@@ -443,7 +460,14 @@ function UserDashboard({ onSignOut }) {
                   </p>
                 )}
                 {!isLoading &&
-                  tasks.map((task) => <TaskItem key={task._id} task={task} onDelete={handleDeleteTask} />)}
+                  tasks.map((task) => (
+                    <TaskItem
+                      key={task._id}
+                      task={task}
+                      onDelete={handleDeleteTask}
+                      onToggle={handleToggleTask}
+                    />
+                  ))}
               </div>
 
               <p className="mt-9 text-center text-[12px] font-medium text-slate-300">
@@ -452,7 +476,7 @@ function UserDashboard({ onSignOut }) {
             </div>
           </section>
 
-          <RightPanel />
+          <RightPanel upcomingTasks={upcomingTasks} />
         </div>
       </div>
     </main>
