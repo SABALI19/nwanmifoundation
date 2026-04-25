@@ -1,4 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  Bell,
+  Calendar,
+  Check,
+  Folder,
+  HelpCircle,
+  Inbox,
+  LogOut,
+  Menu,
+  Plus,
+  Settings,
+  Trash2,
+  User,
+  X,
+} from 'lucide-react'
 
 const navItems = [
   { label: 'All Tasks', active: true, icon: 'check' },
@@ -10,37 +25,24 @@ const navItems = [
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 function Icon({ name, className = 'h-4 w-4' }) {
-  const paths = {
-    check: 'M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z',
-    calendar:
-      'M7 2h2v2h6V2h2v2h3a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3V2Zm12 8H5v9h14v-9Z',
-    inbox:
-      'M4 4h16l2 9v7H2v-7l2-9Zm1.6 2-1.33 6H8l1.5 2h5l1.5-2h3.73L18.4 6H5.6Z',
-    settings:
-      'm19.43 12.98.04-.98-.04-.98 2.11-1.65-2-3.46-2.48 1a8.04 8.04 0 0 0-1.7-.98L15 3.27h-4l-.36 2.66c-.6.24-1.17.57-1.7.98l-2.48-1-2 3.46 2.11 1.65-.04.98.04.98-2.11 1.65 2 3.46 2.48-1c.53.41 1.1.74 1.7.98L11 20.73h4l.36-2.66c.6-.24 1.17-.57 1.7-.98l2.48 1 2-3.46-2.11-1.65ZM13 15.5A3.5 3.5 0 1 1 13 8a3.5 3.5 0 0 1 0 7.5Z',
-    bell:
-      'M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6v-5a7 7 0 0 0-5-6.7V3a2 2 0 1 0-4 0v1.3A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z',
-    user:
-      'M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.31 0-6 1.79-6 4v1h12v-1c0-2.21-2.69-4-6-4Z',
-    plus: 'M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z',
-    folder:
-      'M10 4 12 6h8a1 1 0 0 1 1 1v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1h6Z',
-    logout:
-      'M10 17v2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5v2H5v10h5Zm5.6-1.4L19.2 12l-3.6-3.6L17 7l6 5-6 5-1.4-1.4ZM9 11h10v2H9v-2Z',
-    help:
-      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-.1 15.5a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm1.72-5.17c-.68.43-.75.72-.75 1.42h-2c0-1.38.42-2.12 1.5-2.82.7-.45 1.18-.8 1.18-1.55 0-.87-.67-1.43-1.65-1.43-.88 0-1.56.48-1.85 1.33L8.2 8.5c.58-1.58 1.95-2.5 3.77-2.5 2.15 0 3.7 1.3 3.7 3.2 0 1.47-.84 2.32-2.05 3.13Z',
-    menu: 'M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z',
-    close:
-      'm6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z',
-    trash:
-      'M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h2v9H7V9Zm4 0h2v9h-2V9Zm4 0h2v9h-2V9ZM6 8h12l-1 13H7L6 8Z',
+  const icons = {
+    check: Check,
+    calendar: Calendar,
+    inbox: Inbox,
+    settings: Settings,
+    bell: Bell,
+    user: User,
+    plus: Plus,
+    folder: Folder,
+    logout: LogOut,
+    help: HelpCircle,
+    menu: Menu,
+    close: X,
+    trash: Trash2,
   }
+  const LucideIcon = icons[name] || HelpCircle
 
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path fill="currentColor" d={paths[name]} />
-    </svg>
-  )
+  return <LucideIcon className={className} aria-hidden="true" strokeWidth={2.4} />
 }
 
 function Sidebar({ className = '', onClose, onSignOut }) {
