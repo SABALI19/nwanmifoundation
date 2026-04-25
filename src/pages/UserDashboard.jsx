@@ -16,10 +16,10 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { label: 'All Tasks', active: true, icon: 'check' },
-  { label: 'Today', icon: 'calendar' },
-  { label: 'Upcoming', icon: 'inbox' },
-  { label: 'Settings', icon: 'settings' },
+  { id: 'all', label: 'All Tasks', icon: 'check' },
+  { id: 'today', label: 'Today', icon: 'calendar' },
+  { id: 'upcoming', label: 'Upcoming', icon: 'inbox' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
 ]
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '')
@@ -45,11 +45,17 @@ function Icon({ name, className = 'h-4 w-4' }) {
   return <LucideIcon className={className} aria-hidden="true" strokeWidth={2.4} />
 }
 
-function Sidebar({ className = '', onClose, onSignOut }) {
+function Sidebar({ activeView, className = '', onClose, onNewTask, onSignOut, onViewChange }) {
+  const handleViewChange = (viewId) => {
+    onViewChange(viewId)
+    onClose?.()
+  }
+
   return (
     <aside className={`flex h-full w-[232px] shrink-0 flex-col border-r border-slate-200 bg-white ${className}`}>
       <div className="flex items-center justify-between px-7 pb-7 pt-4">
-        <h1 className="text-[19px] font-extrabold tracking-normal text-slate-950">Momentum</h1>
+        <h1 className="text-[19px] font-extrabold tracking-normal text-slate-950">AGUNWAMI</h1>
+        <p  className="text-[14px] font-extrabold tracking-normal text-slate-950">ENTERPRISE</p>
         {onClose && (
           <button
             type="button"
@@ -63,22 +69,23 @@ function Sidebar({ className = '', onClose, onSignOut }) {
       </div>
 
       <div className="px-7">
-        <p className="text-[16px] font-extrabold leading-none text-[#465df0]">Momentum</p>
+        <p className="text-[16px] font-extrabold leading-none text-[#465df0]">Samuel Edward</p>
         <p className="mt-2 text-[10px] font-semibold text-slate-500">Productivity Workspace</p>
       </div>
 
       <nav className="mt-8 space-y-3 px-3">
         {navItems.map((item) => (
-          <a
+          <button
             key={item.label}
-            href="#"
-            className={`flex h-10 items-center gap-3 rounded-md px-4 text-[13px] font-semibold ${
-              item.active ? 'bg-[#eef2fb] text-[#244beb]' : 'text-slate-600 hover:bg-slate-50'
+            type="button"
+            className={`flex h-10 w-full items-center gap-3 rounded-md px-4 text-left text-[13px] font-semibold ${
+              activeView === item.id ? 'bg-[#eef2fb] text-[#244beb]' : 'text-slate-600 hover:bg-slate-50'
             }`}
+            onClick={() => handleViewChange(item.id)}
           >
             <Icon name={item.icon} className="h-[18px] w-[18px]" />
             {item.label}
-          </a>
+          </button>
         ))}
       </nav>
 
@@ -86,6 +93,10 @@ function Sidebar({ className = '', onClose, onSignOut }) {
         <button
           type="button"
           className="mb-9 flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#465df0] text-[15px] font-bold text-white shadow-lg shadow-indigo-200"
+          onClick={() => {
+            onNewTask()
+            onClose?.()
+          }}
         >
           <Icon name="plus" className="h-5 w-5" />
           New Task
