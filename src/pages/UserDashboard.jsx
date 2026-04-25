@@ -54,8 +54,10 @@ function Sidebar({ activeView, className = '', onClose, onNewTask, onSignOut, on
   return (
     <aside className={`flex h-full w-[232px] shrink-0 flex-col border-r border-slate-200 bg-white ${className}`}>
       <div className="flex items-center justify-between px-7 pb-7 pt-4">
-        <h1 className="text-[19px] font-extrabold tracking-normal text-slate-950">AGUNWAMI</h1>
-        <p  className="text-[14px] font-extrabold tracking-normal text-slate-950">ENTERPRISE</p>
+       <div className='flex-wrap'>
+         <h1 className="text-[19px] font-extrabold tracking-normal text-amber-300">AGUNWAMI</h1>
+        <p  className="text-[14px] font-extrabold tracking-normal  text-amber-500">ENTERPRISE</p>
+       </div>
         {onClose && (
           <button
             type="button"
