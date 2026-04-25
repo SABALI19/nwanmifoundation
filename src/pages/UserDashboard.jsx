@@ -24,6 +24,33 @@ const navItems = [
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '')
 
+const getTodayDate = () => new Date().toISOString().slice(0, 10)
+
+const formatDue = (due) => {
+  if (!due) return ''
+
+  const parsedDate = new Date(due)
+  if (Number.isNaN(parsedDate.getTime())) return due
+
+  return parsedDate.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+const isTaskDueToday = (task) => task.due?.startsWith(getTodayDate())
+
+const isTaskUpcoming = (task) => {
+  if (!task.due) return false
+
+  const parsedDate = new Date(task.due)
+  if (Number.isNaN(parsedDate.getTime())) return false
+
+  return parsedDate >= new Date()
+}
+
 function Icon({ name, className = 'h-4 w-4' }) {
   const icons = {
     check: Check,
@@ -45,7 +72,7 @@ function Icon({ name, className = 'h-4 w-4' }) {
   return <LucideIcon className={className} aria-hidden="true" strokeWidth={2.4} />
 }
 
-function Sidebar({ activeView, className = '', onClose, onNewTask, onSignOut, onViewChange }) {
+function Sidebar({ activeView, className = '', isNewTaskActive, onClose, onNewTask, onSignOut, onViewChange }) {
   const handleViewChange = (viewId) => {
     onViewChange(viewId)
     onClose?.()
@@ -94,7 +121,11 @@ function Sidebar({ activeView, className = '', onClose, onNewTask, onSignOut, on
       <div className="mt-auto px-3 pb-7">
         <button
           type="button"
-          className="mb-9 flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#465df0] text-[15px] font-bold text-white shadow-lg shadow-indigo-200"
+          className={`mb-9 flex h-12 w-full items-center justify-center gap-3 rounded-md text-[15px] font-bold shadow-lg transition ${
+            isNewTaskActive
+              ? 'bg-[#244beb] text-white shadow-indigo-300 ring-4 ring-indigo-100'
+              : 'bg-[#465df0] text-white shadow-indigo-200 hover:bg-[#344be0]'
+          }`}
           onClick={() => {
             onNewTask()
             onClose?.()
@@ -138,7 +169,7 @@ function TaskItem({ task, onDelete, onToggle }) {
         <p className={`text-[15px] font-medium text-slate-800 ${task.done ? 'line-through' : ''}`}>{task.title}</p>
         <div className="mt-2 flex items-center gap-2">
           <span className="rounded bg-[#eef2ff] px-2 py-0.5 text-[9px] font-extrabold text-[#244beb]">{task.tag}</span>
-          {task.due && <span className="text-[10px] font-bold text-rose-600">{task.due}</span>}
+          {task.due && <span className="text-[10px] font-bold text-rose-600">Due {formatDue(task.due)}</span>}
         </div>
       </div>
       <button
@@ -171,7 +202,7 @@ function RightPanel({ upcomingTasks }) {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-bold text-slate-800">{task.title}</p>
-                <p className="mt-1 text-[12px] text-slate-600">{task.due}</p>
+                <p className="mt-1 text-[12px] text-slate-600">{formatDue(task.due)}</p>
               </div>
             </div>
           ))}
@@ -187,8 +218,12 @@ function RightPanel({ upcomingTasks }) {
 
 function UserDashboard({ onSignOut }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeView, setActiveView] = useState('all')
+  const [isNewTaskActive, setIsNewTaskActive] = useState(false)
   const [tasks, setTasks] = useState([])
   const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskDate, setNewTaskDate] = useState('')
+  const [newTaskTime, setNewTaskTime] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -207,9 +242,26 @@ function UserDashboard({ onSignOut }) {
   const completedCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks])
   const nextTask = tasks.find((task) => !task.done)
   const upcomingTasks = useMemo(
-    () => tasks.filter((task) => task.due && !task.done).slice(0, 5),
+    () => tasks.filter((task) => isTaskUpcoming(task) && !task.done).slice(0, 5),
     [tasks]
   )
+  const visibleTasks = useMemo(() => {
+    if (activeView === 'today') {
+      return tasks.filter((task) => !task.done && isTaskDueToday(task))
+    }
+
+    if (activeView === 'upcoming') {
+      return tasks.filter((task) => !task.done && isTaskUpcoming(task))
+    }
+
+    return tasks
+  }, [activeView, tasks])
+  const viewTitle = {
+    all: "TODAY'S FOCUS",
+    today: 'TODAY',
+    upcoming: 'UPCOMING',
+    settings: 'SETTINGS',
+  }[activeView]
 
   const authHeaders = useMemo(
     () => ({
@@ -259,10 +311,11 @@ function UserDashboard({ onSignOut }) {
     setError('')
 
     try {
+      const due = newTaskDate ? `${newTaskDate}T${newTaskTime || '09:00'}` : ''
       const response = await fetch(`${API_URL}/api/tasks`, {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ title, tag: 'PERSONAL' }),
+        body: JSON.stringify({ title, tag: 'PERSONAL', due }),
       })
       const data = await response.json()
 
@@ -272,6 +325,8 @@ function UserDashboard({ onSignOut }) {
 
       setTasks((currentTasks) => [data.task, ...currentTasks])
       setNewTaskTitle('')
+      setNewTaskDate('')
+      setNewTaskTime('')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -362,6 +417,11 @@ function UserDashboard({ onSignOut }) {
     onSignOut?.()
   }
 
+  const handleNewTaskFocus = () => {
+    setActiveView('all')
+    window.setTimeout(() => taskInputRef.current?.focus(), 0)
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f8ff] text-slate-950">
       {sidebarOpen && (
@@ -372,12 +432,27 @@ function UserDashboard({ onSignOut }) {
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
           />
-          <Sidebar className="relative z-10 shadow-2xl" onClose={() => setSidebarOpen(false)} onSignOut={handleSignOut} />
+          <Sidebar
+            activeView={activeView}
+            className="relative z-10 shadow-2xl"
+            isNewTaskActive={isNewTaskActive}
+            onClose={() => setSidebarOpen(false)}
+            onNewTask={handleNewTaskFocus}
+            onSignOut={handleSignOut}
+            onViewChange={setActiveView}
+          />
         </div>
       )}
 
       <div className="flex min-h-screen">
-        <Sidebar className="hidden lg:flex" onSignOut={handleSignOut} />
+        <Sidebar
+          activeView={activeView}
+          className="hidden lg:flex"
+          isNewTaskActive={isNewTaskActive}
+          onNewTask={handleNewTaskFocus}
+          onSignOut={handleSignOut}
+          onViewChange={setActiveView}
+        />
 
         <div className="flex min-w-0 flex-1 flex-col xl:flex-row">
           <section className="min-w-0 flex-1 border-r border-slate-200">
@@ -406,34 +481,58 @@ function UserDashboard({ onSignOut }) {
                 </p>
               </div>
 
-              <form
-                className="flex h-[66px] items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 shadow-sm sm:gap-4 sm:px-4"
-                onSubmit={handleCreateTask}
-              >
-                <button
-                  type="button"
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-500 text-white transition hover:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-200"
-                  aria-label="Focus task input"
-                  onClick={() => taskInputRef.current?.focus()}
-                >
-                  <Icon name="plus" className="h-4 w-4" />
-                </button>
-                <input
-                  ref={taskInputRef}
-                  className="min-w-0 flex-1 bg-transparent text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
-                  placeholder="Create a new task..."
-                  value={newTaskTitle}
-                  onChange={(event) => setNewTaskTitle(event.target.value)}
-                  disabled={!token || isSaving}
-                />
-                <button
-                  type="submit"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#465df0] text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-                  aria-label="Create task"
-                  disabled={!newTaskTitle.trim() || !token || isSaving}
-                >
-                  <Icon name="plus" className="h-5 w-5" />
-                </button>
+              <form className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm sm:p-4" onSubmit={handleCreateTask}>
+                <div className="flex h-11 items-center gap-3">
+                  <button
+                    type="button"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-500 text-white transition hover:bg-slate-700 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                    aria-label="Focus task input"
+                    onClick={() => taskInputRef.current?.focus()}
+                  >
+                    <Icon name="plus" className="h-4 w-4" />
+                  </button>
+                  <input
+                    ref={taskInputRef}
+                    className="min-w-0 flex-1 bg-transparent text-[15px] text-slate-800 outline-none placeholder:text-slate-400"
+                    placeholder="Create a new task..."
+                    value={newTaskTitle}
+                    onChange={(event) => setNewTaskTitle(event.target.value)}
+                    onBlur={() => setIsNewTaskActive(false)}
+                    onFocus={() => setIsNewTaskActive(true)}
+                    disabled={!token || isSaving}
+                  />
+                  <button
+                    type="submit"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#465df0] text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                    aria-label="Create task"
+                    disabled={!newTaskTitle.trim() || !token || isSaving}
+                  >
+                    <Icon name="plus" className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
+                  <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Due Date
+                    <input
+                      type="date"
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[13px] font-semibold text-slate-700 outline-none focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
+                      value={newTaskDate}
+                      onChange={(event) => setNewTaskDate(event.target.value)}
+                      disabled={!token || isSaving}
+                    />
+                  </label>
+                  <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Due Time
+                    <input
+                      type="time"
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[13px] font-semibold text-slate-700 outline-none focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
+                      value={newTaskTime}
+                      onChange={(event) => setNewTaskTime(event.target.value)}
+                      disabled={!token || isSaving || !newTaskDate}
+                    />
+                  </label>
+                </div>
               </form>
               {error && <p className="mt-3 text-[13px] font-semibold text-rose-600">{error}</p>}
 
@@ -459,29 +558,47 @@ function UserDashboard({ onSignOut }) {
               </div>
 
               <div className="mt-9 mb-4 flex items-center justify-between">
-                <h3 className="text-[13px] font-extrabold tracking-wide text-slate-800">TODAY'S FOCUS</h3>
-                <button type="button" className="text-[11px] font-bold text-[#244beb]" onClick={handleMarkAllDone}>
-                  Mark all done
-                </button>
+                <h3 className="text-[13px] font-extrabold tracking-wide text-slate-800">{viewTitle}</h3>
+                {activeView !== 'settings' && (
+                  <button type="button" className="text-[11px] font-bold text-[#244beb]" onClick={handleMarkAllDone}>
+                    Mark all done
+                  </button>
+                )}
               </div>
 
-              <div className="space-y-2">
-                {isLoading && <p className="text-[13px] font-semibold text-slate-500">Loading tasks...</p>}
-                {!isLoading && tasks.length === 0 && (
-                  <p className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-[13px] font-semibold text-slate-500">
-                    No tasks yet.
+              {activeView === 'settings' ? (
+                <div className="rounded-md border border-slate-300 bg-white px-4 py-6">
+                  <p className="text-[15px] font-bold text-slate-800">Account</p>
+                  <p className="mt-2 text-[13px] font-semibold text-slate-500">
+                    Signed in as {user.fullName || user.email || 'this user'}.
                   </p>
-                )}
-                {!isLoading &&
-                  tasks.map((task) => (
-                    <TaskItem
-                      key={task._id}
-                      task={task}
-                      onDelete={handleDeleteTask}
-                      onToggle={handleToggleTask}
-                    />
-                  ))}
-              </div>
+                  <button
+                    type="button"
+                    className="mt-5 rounded-md bg-[#465df0] px-4 py-3 text-[13px] font-bold text-white"
+                    onClick={handleSignOut}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {isLoading && <p className="text-[13px] font-semibold text-slate-500">Loading tasks...</p>}
+                  {!isLoading && visibleTasks.length === 0 && (
+                    <p className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-[13px] font-semibold text-slate-500">
+                      No tasks here yet.
+                    </p>
+                  )}
+                  {!isLoading &&
+                    visibleTasks.map((task) => (
+                      <TaskItem
+                        key={task._id}
+                        task={task}
+                        onDelete={handleDeleteTask}
+                        onToggle={handleToggleTask}
+                      />
+                    ))}
+                </div>
+              )}
 
               <p className="mt-9 text-center text-[12px] font-medium text-slate-300">
                 You've reached the end of your list. Keep the momentum!
