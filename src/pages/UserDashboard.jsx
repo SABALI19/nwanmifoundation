@@ -243,6 +243,8 @@ function UserDashboard({ onSignOut }) {
     }
   })
   const taskInputRef = useRef(null)
+  const taskDateRef = useRef(null)
+  const taskTimeRef = useRef(null)
   const firstName = user.fullName?.split(' ')[0] || user.email?.split('@')[0] || 'there'
   const greeting = getGreeting()
   // Support both token keys while the auth screens are still being wired into this dashboard.
@@ -316,11 +318,24 @@ function UserDashboard({ onSignOut }) {
     const title = newTaskTitle.trim()
     if (!title || !token) return
 
+    if (!newTaskDate || !newTaskTime) {
+      setError('Choose due date and due time before creating a task.')
+      setIsNewTaskActive(true)
+
+      if (!newTaskDate) {
+        taskDateRef.current?.focus()
+        return
+      }
+
+      taskTimeRef.current?.focus()
+      return
+    }
+
     setIsSaving(true)
     setError('')
 
     try {
-      const due = newTaskDate ? `${newTaskDate}T${newTaskTime || '09:00'}` : ''
+      const due = `${newTaskDate}T${newTaskTime}`
       const response = await fetch(`${API_URL}/api/tasks`, {
         method: 'POST',
         headers: authHeaders,
@@ -524,6 +539,7 @@ function UserDashboard({ onSignOut }) {
                   <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                     Due Date
                     <input
+                      ref={taskDateRef}
                       type="date"
                       className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[13px] font-semibold text-slate-700 outline-none focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
                       value={newTaskDate}
@@ -534,6 +550,7 @@ function UserDashboard({ onSignOut }) {
                   <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                     Due Time
                     <input
+                      ref={taskTimeRef}
                       type="time"
                       className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[13px] font-semibold text-slate-700 outline-none focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
                       value={newTaskTime}

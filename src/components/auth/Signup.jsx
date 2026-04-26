@@ -89,17 +89,9 @@ function Signup({ onAuthSuccess, onShowLogin }) {
 
       <section className="relative mx-auto flex min-h-screen w-full max-w-[560px] flex-col items-center px-6 py-14 sm:py-16">
         <div className="mb-7 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[10px] bg-[#465df0] shadow-lg shadow-indigo-200">
-            <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" aria-hidden="true">
-              <path
-                fill="currentColor"
-                d="M12.7 3.3c2.9-.9 5.9-.2 8 1.9.34.34.43.86.22 1.29l-2.15 4.41a9.03 9.03 0 0 1-4.26 4.22l-1.6.76-4.82-4.82.76-1.6a9.03 9.03 0 0 1 4.22-4.26l-.37-1.9Zm1.53 5.03a1.74 1.74 0 1 0 2.46 2.46 1.74 1.74 0 0 0-2.46-2.46ZM7.2 12.35l4.45 4.45-1.56 1.56a2 2 0 0 1-1.12.55l-4.01.6a.42.42 0 0 1-.47-.47l.6-4.01a2 2 0 0 1 .55-1.12l1.56-1.56Z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-[31px] font-extrabold leading-none tracking-normal">Momentum</h1>
+          <h1 className="text-[31px] font-extrabold leading-none tracking-normal text-[#244beb]">Samuel Edward</h1>
           <p className="mt-3 max-w-[330px] text-[15px] leading-5 text-slate-600">
-            Experience cognitive clarity with the world's most focused task manager.
+           Task manager assessment project.
           </p>
         </div>
 

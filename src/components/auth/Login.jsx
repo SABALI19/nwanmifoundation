@@ -4,17 +4,7 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replac
 
 function BrandMark() {
   return (
-    <div className="flex items-center justify-center gap-2">
-      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#465df0] text-white">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M12.7 3.3c2.9-.9 5.9-.2 8 1.9.34.34.43.86.22 1.29l-2.15 4.41a9.03 9.03 0 0 1-4.26 4.22l-1.6.76-4.82-4.82.76-1.6a9.03 9.03 0 0 1 4.22-4.26l-.37-1.9Zm1.53 5.03a1.74 1.74 0 1 0 2.46 2.46 1.74 1.74 0 0 0-2.46-2.46ZM7.2 12.35l4.45 4.45-1.56 1.56a2 2 0 0 1-1.12.55l-4.01.6a.42.42 0 0 1-.47-.47l.6-4.01a2 2 0 0 1 .55-1.12l1.56-1.56Z"
-          />
-        </svg>
-      </span>
-      <span className="text-[14px] font-medium text-slate-900">NWAMI Foundation</span>
-    </div>
+    <div className="text-center text-[16px] font-extrabold leading-none text-[#244beb]">Samuel Edward</div>
   )
 }
 
