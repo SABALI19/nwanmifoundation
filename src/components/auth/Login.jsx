@@ -4,7 +4,14 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replac
 
 function BrandMark() {
   return (
-    <div className="text-center text-[16px] font-extrabold leading-none text-[#244beb]">Samuel Edward</div>
+    <section className="flex w-full max-w-[560px] flex-col items-center">
+      <div className="flex flex-col items-center text-center">
+        <h1 className="text-[31px] font-extrabold leading-none tracking-normal text-[#244beb]">Samuel Edward</h1>
+        <p className="mt-3 max-w-[330px] text-[15px] leading-5 text-slate-600">
+          Task manager assessment project.
+        </p>
+      </div>
+    </section>
   )
 }
 
@@ -54,13 +61,13 @@ function Login({ onAuthSuccess, onShowSignup }) {
         <BrandMark />
 
         <form
-          className="mt-[170px] w-full max-w-[395px] rounded-xl border border-slate-300/90 bg-white px-6 py-8 shadow-sm"
+          className="mt-8 w-full max-w-[395px] rounded-xl border border-slate-300/90 bg-white px-6 py-8 shadow-sm"
           aria-label="Log in"
           onSubmit={handleSubmit}
         >
-          <div className="mb-9 text-center">
+          <div className="mb-5 text-center">
             <h1 className="text-[17px] font-medium leading-none text-slate-900">Welcome back</h1>
-            <p className="mt-4 text-[15px] leading-none text-slate-700">Focus on what matters today.</p>
+            <p className="mt-2 text-[15px] leading-none text-slate-700">Focus on what matters today.</p>
           </div>
 
           <label className="mb-5 block">
