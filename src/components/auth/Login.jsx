@@ -101,11 +101,11 @@ function Login({ onAuthSuccess, onShowSignup }) {
             </svg>
           </button>
 
-          <div className="my-9 flex items-center gap-3 text-[11px] text-slate-600">
+          {/* <div className="my-9 flex items-center gap-3 text-[11px] text-slate-600">
             <span className="h-px flex-1 bg-slate-300" />
             <span>Or continue with</span>
             <span className="h-px flex-1 bg-slate-300" />
-          </div>
+          </div> */}
 
           {/* <div className="grid grid-cols-2 gap-4">
             <button

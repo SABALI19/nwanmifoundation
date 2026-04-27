@@ -167,11 +167,11 @@ function Signup({ onShowLogin }) {
             </svg>
           </button>
 
-          <div className="my-7 flex items-center gap-4 text-[14px] text-slate-500">
+          {/* <div className="my-7 flex items-center gap-4 text-[14px] text-slate-500">
             <span className="h-px flex-1 bg-slate-200" />
             <span>Or continue with</span>
             <span className="h-px flex-1 bg-slate-200" />
-          </div>
+          </div> */}
 
           {/* <div className="grid grid-cols-2 gap-4">
             <button type="button" className="flex h-12 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white text-[15px] font-medium text-slate-700 transition hover:bg-slate-50">
