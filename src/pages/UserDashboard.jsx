@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Bell,
   Calendar,
@@ -14,6 +14,16 @@ import {
   User,
   X,
 } from 'lucide-react'
+import {
+  createLocalTask,
+  deleteLocalTask,
+  getCurrentUser,
+  getLocalTasks,
+  getSessionToken,
+  saveLocalTasks,
+  signOutLocalUser,
+  updateLocalTask,
+} from '../utils/localAuth'
 
 const navItems = [
   { id: 'all', label: 'All Tasks', icon: 'check' },
@@ -21,8 +31,6 @@ const navItems = [
   { id: 'upcoming', label: 'Upcoming', icon: 'inbox' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ]
-
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '')
 
 const getTodayDate = () => new Date().toISOString().slice(0, 10)
 
@@ -228,27 +236,20 @@ function UserDashboard({ onSignOut }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeView, setActiveView] = useState('all')
   const [isNewTaskActive, setIsNewTaskActive] = useState(false)
-  const [tasks, setTasks] = useState([])
+  const [user] = useState(() => getCurrentUser() || {})
+  const token = getSessionToken()
+  const [tasks, setTasks] = useState(() => (token && user.id ? getLocalTasks(user.id) : []))
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDate, setNewTaskDate] = useState('')
   const [newTaskTime, setNewTaskTime] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [user] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('user')) || {}
-    } catch {
-      return {}
-    }
-  })
+  const [error, setError] = useState(() => (token && user.id ? '' : 'Sign in to view your tasks.'))
   const taskInputRef = useRef(null)
   const taskDateRef = useRef(null)
   const taskTimeRef = useRef(null)
   const firstName = user.fullName?.split(' ')[0] || user.email?.split('@')[0] || 'there'
   const greeting = getGreeting()
-  // Support both token keys while the auth screens are still being wired into this dashboard.
-  const token = localStorage.getItem('token') || localStorage.getItem('authToken')
+  const isLoading = false
 
   const completedCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks])
   const nextTask = tasks.find((task) => !task.done)
@@ -274,49 +275,11 @@ function UserDashboard({ onSignOut }) {
     settings: 'SETTINGS',
   }[activeView]
 
-  const authHeaders = useMemo(
-    () => ({
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    }),
-    [token]
-  )
-
-  useEffect(() => {
-    const fetchTasks = async () => {
-      if (!token) {
-        setIsLoading(false)
-        setError('Sign in to view your tasks.')
-        return
-      }
-
-      try {
-        const response = await fetch(`${API_URL}/api/tasks`, {
-          headers: authHeaders,
-        })
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Could not load tasks')
-        }
-
-        setTasks(data.tasks)
-        setError('')
-      } catch (err) {
-        setError(err.message)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchTasks()
-  }, [authHeaders, token])
-
   const handleCreateTask = async (event) => {
     event.preventDefault()
 
     const title = newTaskTitle.trim()
-    if (!title || !token) return
+    if (!title || !token || !user.id) return
 
     if (!newTaskDate || !newTaskTime) {
       setError('Choose due date and due time before creating a task.')
@@ -336,18 +299,9 @@ function UserDashboard({ onSignOut }) {
 
     try {
       const due = `${newTaskDate}T${newTaskTime}`
-      const response = await fetch(`${API_URL}/api/tasks`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ title, tag: 'PERSONAL', due }),
-      })
-      const data = await response.json()
+      const task = createLocalTask(user.id, { title, tag: 'PERSONAL', due })
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Could not create task')
-      }
-
-      setTasks((currentTasks) => [data.task, ...currentTasks])
+      setTasks((currentTasks) => [task, ...currentTasks])
       setNewTaskTitle('')
       setNewTaskDate('')
       setNewTaskTime('')
@@ -359,85 +313,47 @@ function UserDashboard({ onSignOut }) {
   }
 
   const handleDeleteTask = async (taskId) => {
-    if (!token) return
-
-    const previousTasks = tasks
-    // Remove immediately so the dashboard feels responsive; restore below if the API rejects it.
-    setTasks((currentTasks) => currentTasks.filter((task) => task._id !== taskId))
+    if (!token || !user.id) return
 
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}`, {
-        method: 'DELETE',
-        headers: authHeaders,
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || 'Could not delete task')
-      }
+      deleteLocalTask(user.id, taskId)
+      setTasks((currentTasks) => currentTasks.filter((task) => task._id !== taskId))
     } catch (err) {
-      setTasks(previousTasks)
       setError(err.message)
     }
   }
 
   const handleToggleTask = async (taskToUpdate) => {
-    if (!token) return
+    if (!token || !user.id) return
 
     const nextDone = !taskToUpdate.done
-    const previousTasks = tasks
     setError('')
-    setTasks((currentTasks) =>
-      currentTasks.map((task) => (task._id === taskToUpdate._id ? { ...task, done: nextDone } : task))
-    )
 
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskToUpdate._id}`, {
-        method: 'PATCH',
-        headers: authHeaders,
-        body: JSON.stringify({ done: nextDone }),
-      })
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Could not update task')
-      }
+      const updatedTask = updateLocalTask(user.id, taskToUpdate._id, { done: nextDone })
 
       setTasks((currentTasks) =>
-        currentTasks.map((task) => (task._id === taskToUpdate._id ? data.task : task))
+        currentTasks.map((task) => (task._id === taskToUpdate._id ? updatedTask : task))
       )
     } catch (err) {
-      setTasks(previousTasks)
       setError(err.message)
     }
   }
 
   const handleMarkAllDone = async () => {
-    if (!token) return
-
-    const incompleteTasks = tasks.filter((task) => !task.done)
-    // This mirrors the batch request visually; individual failures are surfaced as one dashboard error.
-    setTasks((currentTasks) => currentTasks.map((task) => ({ ...task, done: true })))
+    if (!token || !user.id) return
 
     try {
-      await Promise.all(
-        incompleteTasks.map((task) =>
-          fetch(`${API_URL}/api/tasks/${task._id}`, {
-            method: 'PATCH',
-            headers: authHeaders,
-            body: JSON.stringify({ done: true }),
-          })
-        )
-      )
+      const completedTasks = tasks.map((task) => ({ ...task, done: true, updatedAt: new Date().toISOString() }))
+      saveLocalTasks(user.id, completedTasks)
+      setTasks(completedTasks)
     } catch {
       setError('Could not mark all tasks done')
     }
   }
 
   const handleSignOut = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('user')
+    signOutLocalUser()
     onSignOut?.()
   }
 
@@ -523,13 +439,13 @@ function UserDashboard({ onSignOut }) {
                     onChange={(event) => setNewTaskTitle(event.target.value)}
                     onBlur={() => setIsNewTaskActive(false)}
                     onFocus={() => setIsNewTaskActive(true)}
-                    disabled={!token || isSaving}
+                    disabled={!token || !user.id || isSaving}
                   />
                   <button
                     type="submit"
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#465df0] text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                     aria-label="Create task"
-                    disabled={!newTaskTitle.trim() || !token || isSaving}
+                    disabled={!newTaskTitle.trim() || !token || !user.id || isSaving}
                   >
                     <Icon name="plus" className="h-5 w-5" />
                   </button>
@@ -544,7 +460,7 @@ function UserDashboard({ onSignOut }) {
                       className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[13px] font-semibold text-slate-700 outline-none focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
                       value={newTaskDate}
                       onChange={(event) => setNewTaskDate(event.target.value)}
-                      disabled={!token || isSaving}
+                      disabled={!token || !user.id || isSaving}
                     />
                   </label>
                   <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
@@ -555,7 +471,7 @@ function UserDashboard({ onSignOut }) {
                       className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-[#eef2fb] px-3 text-[13px] font-semibold text-slate-700 outline-none focus:border-[#465df0] focus:ring-4 focus:ring-indigo-100"
                       value={newTaskTime}
                       onChange={(event) => setNewTaskTime(event.target.value)}
-                      disabled={!token || isSaving || !newTaskDate}
+                      disabled={!token || !user.id || isSaving || !newTaskDate}
                     />
                   </label>
                 </div>

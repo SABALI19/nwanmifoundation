@@ -1,6 +1,5 @@
 import { useState } from 'react'
-
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '')
+import { signupLocalUser } from '../../utils/localAuth'
 
 function FieldIcon({ type }) {
   if (type === 'mail') {
@@ -35,7 +34,7 @@ function FieldIcon({ type }) {
   )
 }
 
-function Signup({ onAuthSuccess, onShowLogin }) {
+function Signup({ onShowLogin }) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -62,20 +61,8 @@ function Signup({ onAuthSuccess, onShowLogin }) {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Signup failed')
-      }
-
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('user', JSON.stringify(data.user))
-      onAuthSuccess?.()
+      signupLocalUser(formData)
+      onShowLogin?.()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -186,7 +173,7 @@ function Signup({ onAuthSuccess, onShowLogin }) {
             <span className="h-px flex-1 bg-slate-200" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-2 gap-4">
             <button type="button" className="flex h-12 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white text-[15px] font-medium text-slate-700 transition hover:bg-slate-50">
               <span className="text-lg font-bold text-[#4285f4]">G</span>
               Google
@@ -200,7 +187,7 @@ function Signup({ onAuthSuccess, onShowLogin }) {
               </svg>
               GitHub
             </button>
-          </div>
+          </div> */}
         </form>
 
         <p className="mt-8 text-[14px] text-slate-600">

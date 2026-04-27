@@ -1,6 +1,5 @@
 import { useState } from 'react'
-
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '')
+import { loginLocalUser } from '../../utils/localAuth'
 
 function BrandMark() {
   return (
@@ -34,19 +33,7 @@ function Login({ onAuthSuccess, onShowSignup }) {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed')
-      }
-
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('user', JSON.stringify(data.user))
+      loginLocalUser(formData)
       onAuthSuccess?.()
     } catch (err) {
       setError(err.message)
@@ -120,7 +107,7 @@ function Login({ onAuthSuccess, onShowSignup }) {
             <span className="h-px flex-1 bg-slate-300" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               className="flex h-12 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white text-[14px] font-medium text-slate-800 transition hover:bg-slate-50"
@@ -135,7 +122,7 @@ function Login({ onAuthSuccess, onShowSignup }) {
               <span className="text-[11px] font-bold text-slate-900">iOS</span>
               Apple
             </button>
-          </div>
+          </div> */}
         </form>
 
         <p className="mt-8 text-[14px] text-slate-700">
